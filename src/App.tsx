@@ -1,173 +1,71 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
-
 import React, { useState, useEffect } from 'react';
-import ChatInterface from './components/ChatInterface';
-import Sidebar from './components/Sidebar';
 import AdBanner from './components/AdBanner';
 import AdWallModal from './components/AdWallModal';
-import { ChatSession, Message } from './types';
-import { loadChats, saveChats, createNewChat } from './services/chatStorage';
-import { generateOficioFromPrompt } from './services/gemini';
+import { Play, Trophy } from 'lucide-react';
 
 export default function App() {
-  const [sessions, setSessions] = useState<ChatSession[]>([]);
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  
-  // Ad Wall State
+  const [adsWatched, setAdsWatched] = useState(0);
   const [isAdWallOpen, setIsAdWallOpen] = useState(false);
-  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
 
-  // Load chats on mount
   useEffect(() => {
-    const loadedChats = loadChats();
-    setSessions(loadedChats);
-    
-    if (loadedChats.length > 0) {
-      setCurrentSessionId(loadedChats[0].id);
-    } else {
-      createNewSession();
-    }
+    const saved = localStorage.getItem('adsWatched');
+    if (saved) setAdsWatched(parseInt(saved, 10));
   }, []);
 
-  // Save chats whenever they change
-  useEffect(() => {
-    if (sessions.length > 0) {
-      saveChats(sessions);
-    }
-  }, [sessions]);
-
-  const createNewSession = () => {
-    const newChat = createNewChat();
-    setSessions(prev => [newChat, ...prev]);
-    setCurrentSessionId(newChat.id);
-    setIsSidebarOpen(false); // Close sidebar on mobile when creating new chat
-  };
-
-  const deleteSession = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    const newSessions = sessions.filter(s => s.id !== id);
-    setSessions(newSessions);
-    saveChats(newSessions); // Force save immediately
-
-    if (currentSessionId === id) {
-      if (newSessions.length > 0) {
-        setCurrentSessionId(newSessions[0].id);
-      } else {
-        createNewSession();
-      }
-    }
-  };
-
-  const handleSendMessage = (content: string) => {
-    if (!currentSessionId) return;
-
-    // Trigger Ad Wall before generating
-    setPendingMessage(content);
-    setIsAdWallOpen(true);
-  };
-
-  const executeGeneration = async () => {
-    if (!currentSessionId || !pendingMessage) return;
-    
-    const content = pendingMessage;
+  const handleAdComplete = () => {
+    const newCount = adsWatched + 1;
+    setAdsWatched(newCount);
+    localStorage.setItem('adsWatched', newCount.toString());
     setIsAdWallOpen(false);
-    setPendingMessage(null);
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      role: 'user',
-      content,
-      timestamp: Date.now()
-    };
-
-    // Update state optimistically
-    setSessions(prev => prev.map(session => {
-      if (session.id === currentSessionId) {
-        // Generate a title if it's the first message
-        const title = session.messages.length === 0 
-          ? (content.length > 30 ? content.substring(0, 30) + '...' : content)
-          : session.title;
-          
-        return {
-          ...session,
-          title,
-          messages: [...session.messages, userMessage],
-          updatedAt: Date.now()
-        };
-      }
-      return session;
-    }));
-
-    setIsGenerating(true);
-
-    try {
-      const responseText = await generateOficioFromPrompt(content);
-      
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: responseText,
-        timestamp: Date.now()
-      };
-
-      setSessions(prev => prev.map(session => {
-        if (session.id === currentSessionId) {
-          return {
-            ...session,
-            messages: [...session.messages, botMessage],
-            updatedAt: Date.now()
-          };
-        }
-        return session;
-      }));
-
-    } catch (error) {
-      console.error("Error generating response:", error);
-    } finally {
-      setIsGenerating(false);
-    }
   };
-
-  const currentSession = sessions.find(s => s.id === currentSessionId);
 
   return (
-    <div className="flex h-screen bg-white overflow-hidden font-sans">
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-        sessions={sessions}
-        currentSessionId={currentSessionId}
-        onSelectSession={(id) => {
-          setCurrentSessionId(id);
-          setIsSidebarOpen(false);
-        }}
-        onNewChat={createNewSession}
-        onDeleteSession={deleteSession}
-      />
+    <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
+      {/* Header */}
+      <header className="bg-white border-b border-slate-200 p-4 shadow-sm sticky top-0 z-10">
+        <div className="max-w-md mx-auto flex items-center justify-between">
+          <h1 className="font-bold text-slate-800 text-lg">OfícioGen Ads</h1>
+          <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-full text-indigo-700 text-sm font-medium">
+            <Trophy size={16} />
+            <span>{adsWatched} Assistidos</span>
+          </div>
+        </div>
+      </header>
 
-      <main className="flex-1 flex flex-col h-full relative w-full">
-        {/* Ad Banner */}
-        <div className="bg-slate-50 px-4 pt-2 shrink-0">
-          <AdBanner className="bg-white" />
+      <main className="flex-1 max-w-md mx-auto w-full p-4 flex flex-col gap-6">
+        {/* Main Action */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 text-center space-y-4">
+          <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto text-indigo-600">
+            <Play size={32} className="ml-1" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-slate-800">Assistir Anúncios</h2>
+            <p className="text-slate-500 text-sm mt-1">
+              Apoie o projeto assistindo a uma sequência de publicidade.
+            </p>
+          </div>
+          <button
+            onClick={() => setIsAdWallOpen(true)}
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg shadow-indigo-200 active:scale-95"
+          >
+            Iniciar Sequência
+          </button>
         </div>
 
-        <ChatInterface
-          messages={currentSession?.messages || []}
-          onSendMessage={handleSendMessage}
-          isGenerating={isGenerating}
-          onToggleSidebar={() => setIsSidebarOpen(true)}
-        />
+        {/* Static Ad Units */}
+        <div className="space-y-4">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider text-center">
+            Parceiros
+          </p>
+          <AdBanner slotId="STATIC_SLOT_1" className="min-h-[250px] bg-white border-slate-200 shadow-sm" />
+          <AdBanner slotId="STATIC_SLOT_2" className="min-h-[250px] bg-white border-slate-200 shadow-sm" />
+        </div>
       </main>
 
-      <AdWallModal 
-        isOpen={isAdWallOpen} 
+      <AdWallModal
+        isOpen={isAdWallOpen}
         onClose={() => setIsAdWallOpen(false)}
-        onComplete={executeGeneration}
+        onComplete={handleAdComplete}
       />
     </div>
   );
