@@ -1,19 +1,19 @@
 import { GoogleGenAI } from "@google/genai";
 
-// Initialize the client with the API key
-// The key is injected by the environment
-export const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Lazy initialization to prevent crash on startup if key is missing
+let aiClient: GoogleGenAI | null = null;
 
-export interface EmailData {
-  recipientName: string;
-  recipientRole: string;
-  senderName: string;
-  senderRole: string;
-  subject: string;
-  keyPoints: string;
-  tone: 'formal' | 'urgent' | 'standard';
+function getAiClient() {
+  if (!aiClient) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error("GEMINI_API_KEY is missing!");
+      throw new Error("Chave de API do Gemini não encontrada. Configure a variável de ambiente GEMINI_API_KEY.");
+    }
+    aiClient = new GoogleGenAI({ apiKey });
+  }
+  return aiClient;
 }
-
 
 export async function generateOficioFromPrompt(userPrompt: string): Promise<string> {
   const systemInstruction = `
@@ -33,6 +33,7 @@ export async function generateOficioFromPrompt(userPrompt: string): Promise<stri
   `;
 
   try {
+    const ai = getAiClient();
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: [
@@ -44,6 +45,9 @@ export async function generateOficioFromPrompt(userPrompt: string): Promise<stri
     return response.text || "Erro ao gerar o texto. Tente novamente.";
   } catch (error) {
     console.error("Erro na geração:", error);
-    return "Ocorreu um erro ao conectar com a IA. Verifique sua chave de API ou tente novamente mais tarde.";
+    if (error instanceof Error && error.message.includes("API Key")) {
+      return "Erro de Configuração: Chave de API não encontrada. Por favor, configure a variável GEMINI_API_KEY no painel da Vercel.";
+    }
+    return "Ocorreu um erro ao conectar com a IA. Tente novamente mais tarde.";
   }
 }
