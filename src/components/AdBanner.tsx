@@ -31,13 +31,13 @@ export default function AdBanner({ className = "", slotId = "1234567890", format
         {/* Código do AdSense */}
         <ins className="adsbygoogle"
              style={{ display: 'block', width: '100%' }}
-             data-ad-client="ca-pub-XXXXXXXXXXXXXXXX" // <--- COLOQUE SEU ID DE EDITOR AQUI
-             data-ad-slot={slotId}                    // <--- ID DO BLOCO DE ANÚNCIO
+             data-ad-client="ca-pub-7900458101270034"
+             data-ad-slot={slotId}
              data-ad-format={format}
              data-full-width-responsive="true"></ins>
              
         {/* Aviso visual para o dono do site (pode remover depois) */}
-        <div className="py-4 text-xs text-slate-400 border-2 border-dashed border-slate-200 rounded-lg w-full">
+        <div className="py-4 text-xs text-slate-400 border-2 border-dashed border-slate-200 rounded-lg w-full hidden">
           <p className="font-bold text-slate-500">Espaço de Anúncio Real</p>
           <p>Cole seu ID no arquivo <code>AdBanner.tsx</code></p>
         </div>
